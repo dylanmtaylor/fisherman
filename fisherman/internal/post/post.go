@@ -328,6 +328,30 @@ func CopyFlatpaks(target string, wantedRefs []string, flatpakVarPath string) err
 
 	fmt.Fprintf(os.Stdout, "  copied %d apps (%d promoted from user)\n",
 		len(allApps), len(userOnly))
+
+	// Clean up the installer Flatpak from the target so it is not present on the installed system.
+	installerAppIDs := []string{
+		"org.bootcinstaller.Installer",
+		"org.bootcinstaller.Installer.Devel",
+		"org.tunaos.Installer",
+		"org.tunaos.Installer.Devel",
+	}
+	for _, appID := range installerAppIDs {
+		// Remove app files
+		appDir := filepath.Join(dst, "app", appID)
+		if err := os.RemoveAll(appDir); err == nil {
+			fmt.Fprintf(os.Stdout, "  removed installer app files for %s\n", appID)
+		}
+		// Remove exported desktop entry
+		desktopFile := filepath.Join(dst, "exports", "share", "applications", appID+".desktop")
+		if err := os.Remove(desktopFile); err == nil {
+			fmt.Fprintf(os.Stdout, "  removed installer desktop entry for %s\n", appID)
+		}
+		// Remove exported dbus service
+		dbusFile := filepath.Join(dst, "exports", "share", "dbus-1", "services", appID+".service")
+		_ = os.Remove(dbusFile)
+	}
+
 	progress.Substep(fmt.Sprintf("Copied %d Flatpak apps", len(allApps)))
 	return nil
 }
